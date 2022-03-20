@@ -13,5 +13,12 @@
 ---
 **Ответ**:
 
-1. 123
-2. 123
+1. **group_vars/all/example.yml**
+2. `ansible-playbook -i inventory/test.yml site.yml`
+3. `ansible-vault encrypt group_vars/el/exampl.yml`
+4. `ansible-vault decrypt group_vars/el/exampl.yml`
+5. `ansible-vault view group_vars/deb/exampl.yml`
+6. `ansible-playbook -i inventory/prod.yml site.yml --ask-vault-password` // с ключом **--ask-vault-password**
+7. **winrm** - `Run tasks over Microsoft's WinRM`
+8. `ansible-doc -t connection ssh`
+9. `remote_user` or `ansible_user` or `ansible_ssh_user`
