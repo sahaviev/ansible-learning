@@ -1,9 +1,9 @@
 ---
   elasticsearch:
     hosts:
-      ubuntu:
+      elasticsearch-centos7:
         ansible_connection: docker
   kibana:
     hosts:
-      ubuntu:
+      kibana-centos7:
         ansible_connection: docker
