@@ -33,7 +33,7 @@
     - name: restart Kibana
       become: true
       ansible.builtin.service:
-        name: Kibana
+        name: kibana
         state: restarted
   tasks:
     - name: "Copy Kibana's rpm"
