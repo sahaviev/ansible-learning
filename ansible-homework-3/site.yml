@@ -1,0 +1,57 @@
+---
+- name: Install Elasticsearch
+  hosts: elasticsearch
+  handlers:
+    - name: restart Elasticsearch
+      become: true
+      ansible.builtin.service:
+        name: elasticsearch
+        state: restarted
+  tasks:
+    - name: "Copy Elasticsearch's rpm"
+      ansible.builtin.copy:
+        src: "{{ elastic_search_package }}"
+        dest: "/tmp/elasticsearch-{{ elk_stack_version }}-x86_64.rpm"
+        mode: 0644
+      register: download_elastic
+      until: download_elastic is succeeded
+    - name: Install Elasticsearch
+      become: true
+      ansible.builtin.yum:
+        name: "/tmp/elasticsearch-{{ elk_stack_version }}-x86_64.rpm"
+        state: present
+    - name: Configure Elasticsearch
+      become: true
+      ansible.builtin.template:
+        src: elasticsearch.yml.j2
+        dest: /etc/elasticsearch/elasticsearch.yml
+        mode: 0644
+      notify: restart Elasticsearch
+- name: Install Kibana
+  hosts: kibana
+  handlers:
+    - name: restart Kibana
+      become: true
+      ansible.builtin.service:
+        name: Kibana
+        state: restarted
+  tasks:
+    - name: "Copy Kibana's rpm"
+      ansible.builtin.copy:
+        src: "{{ kibana_package }}"
+        dest: "/tmp/kibana-{{ elk_stack_version }}-x86_64.rpm"
+        mode: 0644
+      register: download_kibana
+      until: download_kibana is succeeded
+    - name: Install Kibana
+      become: true
+      ansible.builtin.yum:
+        name: "/tmp/kibana-{{ elk_stack_version }}-x86_64.rpm"
+        state: present
+    - name: Configure Kibana
+      become: true
+      ansible.builtin.template:
+        src: kibana.yml.j2
+        dest: /etc/kibana/kibana.yml
+        mode: 0644
+      notify: restart Kibana
