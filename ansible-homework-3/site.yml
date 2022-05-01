@@ -85,14 +85,14 @@
       notify: restart filebeat
     - name: Set filebeat systemwork
       become: true
-      command:
+      ansible.builtin.command:
         cmd: filebeat modules enable system
         chdir: /usr/share/filebeat/bin
       register: filebeat_modules
       changed_when: filebeat_modules.stdout != 'Module system is already enabled'
     - name: Load Kibana dashboard
       become: true
-      command:
+      ansible.builtin.command:
         cmd: filebeat setup
         chdir: /usr/share/filebeat/bin
       register: filebeat_setup
