@@ -55,3 +55,46 @@
         dest: /etc/kibana/kibana.yml
         mode: 0644
       notify: restart Kibana
+- name: Install Filebeat
+  hosts: app
+  handlers:
+    - name: restart filebeat
+      become: true
+      ansible.builtin.service:
+        name: filebeat
+        state: restarted
+  tasks:
+    - name: "Copy Filebeat's rpm"
+      ansible.builtin.copy:
+        src: "{{ filebeat_package }}"
+        dest: "/tmp/filebeat-{{ elk_stack_version }}-x86_64.rpm"
+        mode: 0644
+      register: download_filebeat
+      until: download_filebeat is succeeded
+    - name: Install Filebeat
+      become: true
+      ansible.builtin.yum:
+        name: "/tmp/filebeat-{{ elk_stack_version }}-x86_64.rpm"
+        state: present
+    - name: Configure Filebeat
+      become: true
+      ansible.builtin.template:
+        src: filebeat.yml.j2
+        dest: /etc/filebeat/filebeat.yml
+        mode: 0644
+      notify: restart filebeat
+    - name: Set filebeat systemwork
+      become: true
+      command:
+        cmd: filebeat modules enable system
+        chdir: /usr/share/filebeat/bin
+      register: filebeat_modules
+      changed_when: filebeat_modules.stdout != 'Module system is already enabled'
+    - name: Load Kibana dashboard
+      become: true
+      command:
+        cmd: filebeat setup
+        chdir: /usr/share/filebeat/bin
+      register: filebeat_setup
+      changed_when: false
+      until: filebeat_setup is succeeded
