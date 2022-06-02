@@ -1,0 +1,6 @@
+---
+- name: Assert Elastic Role
+  hosts: all
+  roles:
+    - elastic
+    - kibana
