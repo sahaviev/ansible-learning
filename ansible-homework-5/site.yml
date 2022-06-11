@@ -181,9 +181,7 @@
         - regexp: "^sonar.jdbc.password"
           line: "sonar.jdbc.password={{ sonarqube_db_password }}"
         - regexp: "^sonar.jdbc.url"
-          line: >
-            sonar.jdbc.url=jdbc:postgresql://localhost:{{ sonar_db_port }}/
-            {{ sonarqube_db_name }}?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance
+          line: sonar.jdbc.url=jdbc:postgresql://localhost:{{ sonar_db_port }}/{{ sonarqube_db_name }}?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance
         - regexp: "^sonar.web.context"
           line: "sonar.web.context={{ sonar_web_context }}"
 
