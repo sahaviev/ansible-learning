@@ -4,7 +4,7 @@
   pre_tasks:
     - name: install unzip
       become: true
-      yum:
+      ansible.builtin.yum:
         name: unzip
         state: present
   tasks:
@@ -64,7 +64,7 @@
         name: "postgresql{{ postgresql_version }}-server"
         state: present
 
-    - name: Init template1 DB
+    - name: Init template DB
       ansible.builtin.command: /usr/pgsql-11/bin/postgresql-11-setup initdb
       failed_when: false
 
@@ -80,7 +80,7 @@
 
     - name: Create user for Sonar in PostgreSQL
       become_user: postgres
-      command: "createuser -s -e {{ sonarqube_db_user }}"
+      ansible.builtin.command: "createuser -s -e {{ sonarqube_db_user }}"
       failed_when: false
 
     - name: Change password for Sonar user in PostgreSQL
@@ -105,23 +105,23 @@
   become: true
   tasks:
     - name: Create group in system
-      group:
+      ansible.builtin.group:
         name: "{{ sonarqube_db_user }}"
         state: present
 
     - name: Create user in system
-      user:
+      ansible.builtin.user:
         name: "{{ sonarqube_db_user }}"
         group: "{{ sonarqube_db_user }}"
 
-#    - name: Set up ssh key to access for managed node
-#      authorized_key:
-#        user: "{{ sonarqube_db_user }}"
-#        state: present
-#        key: "{{ lookup('file', 'id_rsa.pub') }}"
+    - name: Set up ssh key to access for managed node
+      ansible.posix.authorized_key:
+        user: "{{ sonarqube_db_user }}"
+        state: present
+        key: "{{ lookup('file', 'id_rsa.pub') }}"
 
-    - name: "Allow group to have passwordless sudo"
-      lineinfile:
+    - name: Allow group to have passwordless sudo
+      ansible.builtin.lineinfile:
         dest: /etc/sudoers
         state: present
         regexp: '^%{{ sonarqube_db_user }}'
@@ -129,13 +129,14 @@
         validate: 'visudo -cf %s'
 
     - name: Increase Virtual Memory
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /etc/sysctl.conf
         state: present
         regexp: '^vm.max_map_count'
         line: 'vm.max_map_count=262144'
+
     - name: Reboot VM
-      reboot:
+      ansible.builtin.reboot:
 
 - name: Get Sonarqube installed
   hosts: sonarqube
@@ -143,14 +144,15 @@
     ansible_user: "{{ sonarqube_db_user }}"
   tasks:
     - name: Get distrib ZIP
-      get_url:
+      ansible.builtin.get_url:
         url: "{{ sonar_download_url }}"
         dest: "/tmp/{{ sonar_version_directory }}.zip"
         validate_certs: false
+        mode: 0755
 
     - name: Unzip Sonar
       become: true
-      unarchive:
+      ansible.builtin.unarchive:
         src: "/tmp/{{ sonar_version_directory }}.zip"
         dest: /usr/local/
         copy: false
@@ -160,15 +162,16 @@
 
     - name: Move Sonar into place.
       become: true
-      copy:
+      ansible.builtin.copy:
         src: /usr/local/{{ sonar_version_directory }}/
         dest: /usr/local/sonar/
         owner: "{{ sonarqube_db_user }}"
         group: "{{ sonarqube_db_user }}"
         remote_src: true
+        mode: 0755
 
     - name: Configure SonarQube JDBC settings for PostgreSQL.
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /usr/local/sonar/conf/sonar.properties
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
@@ -178,7 +181,9 @@
         - regexp: "^sonar.jdbc.password"
           line: "sonar.jdbc.password={{ sonarqube_db_password }}"
         - regexp: "^sonar.jdbc.url"
-          line: "sonar.jdbc.url=jdbc:postgresql://localhost:{{ sonar_db_port }}/{{ sonarqube_db_name }}?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance"
+          line: >
+            sonar.jdbc.url=jdbc:postgresql://localhost:{{ sonar_db_port }}/
+            {{ sonarqube_db_name }}?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance
         - regexp: "^sonar.web.context"
           line: "sonar.web.context={{ sonar_web_context }}"
 
@@ -223,6 +228,7 @@
         port: 9000
         delay: 3
         timeout: 300
+
 - name: Get Nexus installed
   hosts: nexus
   pre_tasks:
@@ -231,15 +237,18 @@
       ansible.builtin.group:
         name: "{{ nexus_user_group }}"
         state: present
+
     - name: Create Nexus user
       become: true
       ansible.builtin.user:
         name: "{{ nexus_user_name }}"
+
     - name: Install JDK
       become: true
       ansible.builtin.package:
         name: [java-1.8.0-openjdk, java-1.8.0-openjdk-devel]
         state: present
+
   tasks:
     - name: Create Nexus directories
       become: true
@@ -248,6 +257,7 @@
         owner: "{{ nexus_user_name }}"
         path: "{{ item }}"
         state: directory
+        mode: 0755
       with_items:
         - "{{ nexus_directory_log }}"
         - "{{ nexus_directory_data }}"
@@ -262,6 +272,7 @@
         dest: "{{ nexus_directory_package }}/nexus-{{ nexus_version }}.tar.gz"
         url: "{{ nexus_download_url }}/nexus-{{ nexus_version }}-unix.tar.gz"
         validate_certs: false
+        mode: 0755
 
     - name: Unpack Nexus
       become: true
@@ -301,13 +312,13 @@
         regexp: "^run_as_user"
         mode: 0644
 
-#    - name: Raise nofile limit for Nexus user
-#      become: true
-#      pam_limits:
-#        domain: "{{ nexus_user_name }}"
-#        limit_type: "-"
-#        limit_item: nofile
-#        value: "{{ nexus_ulimit }}"
+    - name: Raise nofile limit for Nexus user
+      become: true
+      pam_limits:
+        domain: "{{ nexus_user_name }}"
+        limit_type: "-"
+        limit_item: nofile
+        value: "{{ nexus_ulimit }}"
 
     - name: Create Nexus service for SystemD
       become: true
